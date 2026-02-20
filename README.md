@@ -6,7 +6,7 @@ Async CRUD engine for FastAPI + SQLAlchemy with built-in filtering, pagination, 
 
 [![PyPI version](https://img.shields.io/pypi/v/fastapi-crud-engine)](https://pypi.org/project/fastapi-crud-engine/)
 [![Python versions](https://img.shields.io/pypi/pyversions/fastapi-crud-engine)](https://pypi.org/project/fastapi-crud-engine/)
-[![License](https://img.shields.io/github/license/Lakeserl/auto-crud)](https://github.com/Lakeserl/auto-crud/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/Lakeserl/fastapi-crud-engine)](https://github.com/Lakeserl/fastapi_crud_engine/blob/main/LICENSE)
 
 ## Table of Contents
 
