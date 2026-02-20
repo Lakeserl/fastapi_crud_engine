@@ -23,12 +23,13 @@ def export_csv(filename: str, items: list[Any]) -> StreamingResponse:
         writer = csv.DictWriter(buf, fieldnames=cols)
         writer.writeheader()
         yield buf.getvalue()
-        buf.seek(0); buf.truncate(0)
-
+        buf.seek(0)
+        buf.truncate(0)
         for item in items:
             writer.writerow({c: _safe(_value(item, c)) for c in cols})
             yield buf.getvalue()
-            buf.seek(0); buf.truncate(0)
+            buf.seek(0)
+            buf.truncate(0)
 
     return StreamingResponse(
         generate(),

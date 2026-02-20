@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import DateTime, Integer, String, Text
@@ -10,23 +10,34 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 def build_audit_log_model(base: type[DeclarativeBase]) -> type[DeclarativeBase]:
-    """Create (or reuse) an AuditLog model bound to the given declarative base."""
-    existing = base.registry._class_registry.get("AuditLog")
-    if isinstance(existing, type):
-        return existing
+    for mapper in base.registry.mappers:
+        if mapper.class_.__name__ == "AuditLog":
+            return mapper.class_
 
-    class AuditLog(base):
+    class AuditLog(base):  
         __tablename__ = "audit_logs"
 
-        id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-        table_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-        record_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+        id: Mapped[int] = mapped_column(
+            Integer, primary_key=True, autoincrement=True
+        )
+        table_name: Mapped[str] = mapped_column(
+            String(255), nullable=False, index=True
+        )
+        record_id: Mapped[str] = mapped_column(
+            String(255), nullable=False, index=True
+        )
         action: Mapped[str] = mapped_column(String(32), nullable=False)
-        changed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+        changed_by: Mapped[str | None] = mapped_column(
+            String(255), nullable=True
+        )
         old_values: Mapped[str | None] = mapped_column(Text, nullable=True)
         new_values: Mapped[str | None] = mapped_column(Text, nullable=True)
-        ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
-        user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+        ip_address: Mapped[str | None] = mapped_column(
+            String(64), nullable=True
+        )
+        user_agent: Mapped[str | None] = mapped_column(
+            String(512), nullable=True
+        )
         timestamp: Mapped[datetime] = mapped_column(
             DateTime(timezone=True),
             default=lambda: datetime.now(timezone.utc),
@@ -40,7 +51,6 @@ def build_audit_log_model(base: type[DeclarativeBase]) -> type[DeclarativeBase]:
 def _serialize(obj: Any) -> str | None:
     if obj is None:
         return None
-
     try:
         if isinstance(obj, dict):
             payload = obj
@@ -48,7 +58,10 @@ def _serialize(obj: Any) -> str | None:
             mapper = getattr(obj, "__mapper__", None)
             if mapper is None:
                 return json.dumps(obj, default=str)
-            payload = {c.key: getattr(obj, c.key, None) for c in mapper.column_attrs}
+            payload = {
+                c.key: getattr(obj, c.key, None)
+                for c in mapper.column_attrs
+            }
         return json.dumps(payload, default=str)
     except Exception:
         return None

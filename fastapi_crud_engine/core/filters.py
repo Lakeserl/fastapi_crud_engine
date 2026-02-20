@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FilterSet:
     """
-    Django-style FilterSet for SQLAlchemy + FastAPI.
+    FilterSet for SQLAlchemy + FastAPI.
 
     Example:
         fs = FilterSet(
@@ -78,7 +78,6 @@ class FilterSet:
 
     default_ordering: str | None = None
 
-    # ── Public API ─────────────────────────────────────────────────────────
 
     def apply(
         self,
@@ -86,18 +85,6 @@ class FilterSet:
         model:  type,
         params: Mapping[str, Any],
     ) -> Select:
-        """
-        Apply all active filters to a SQLAlchemy Select statement.
-        Raises HTTP 400 on invalid filter values.
-
-        Args:
-            query:  Base SELECT statement
-            model:  SQLAlchemy model class
-            params: Query params (request.query_params or dict)
-
-        Returns:
-            Modified SELECT with WHERE + ORDER BY clauses
-        """
         try:
             q = query
             q = self._apply_exact(q, model, params)
@@ -111,7 +98,6 @@ class FilterSet:
         except FilterError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
-    # ── Filter applicators ─────────────────────────────────────────────────
 
     def _apply_exact(self, query: Select, model: type, params: Mapping) -> Select:
         for f in self.fields:
@@ -204,14 +190,8 @@ class FilterSet:
             query = query.order_by(*clauses)
         return query
 
-    # ── Utility ────────────────────────────────────────────────────────────
 
     def _get_column(self, model: type, field_name: str):
-        """
-        Get SQLAlchemy column attribute from model.
-        Supports dot / double-underscore for relations (e.g. "profile.name").
-        Caller is responsible for joining the relation in the query.
-        """
         for delim in (".", "__"):
             if delim in field_name:
                 head, tail = field_name.split(delim, 1)
@@ -241,7 +221,6 @@ class FilterSet:
         return col
 
     def _get_param(self, params: Mapping, key: str) -> Any | None:
-        """Single-value extraction. Handles Starlette QueryParams (getlist)."""
         values = self._get_param_values(params, key)
         return values[0] if values else None
 
@@ -258,7 +237,6 @@ class FilterSet:
         return [raw]
 
     def _to_list(self, raw: Any) -> list[str]:
-        """Normalise comma-separated string or list to list[str]."""
         if raw is None:
             return []
         if isinstance(raw, (list, tuple)):
@@ -271,7 +249,6 @@ class FilterSet:
         return [p.strip() for p in str(raw).split(",") if p.strip()]
 
     def _coerce(self, column: Any, raw: Any) -> Any:
-        """Coerce raw string value to Python type matching column.type."""
         if raw is None:
             return None
         if isinstance(raw, (int, float, bool, Decimal, datetime, date, time)):
@@ -297,7 +274,7 @@ class FilterSet:
                 f"'{getattr(column, 'key', column)}': {exc}"
             ) from exc
 
-        return s  # default: string passthrough
+        return s  
 
     @staticmethod
     def _parse_bool(value: Any) -> bool:

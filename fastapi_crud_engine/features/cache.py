@@ -2,8 +2,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
-from dataclasses import dataclass, field
+from collections import OrderedDict
+from dataclasses import dataclass
 from typing import Any, Literal
 
 class _TTLEntry:
@@ -16,7 +18,7 @@ class _TTLEntry:
 
 class _InMemoryCache:
     def __init__(self, max_size: int = 10_000):
-        self._store: dict[str, _TTLEntry] = {}
+        self._store: OrderedDict[str, _TTLEntry] = OrderedDict()
         self._max   = max_size
 
     def get(self, key: str) -> Any | None:
@@ -26,13 +28,14 @@ class _InMemoryCache:
         if time.monotonic() > entry.expires_at:
             del self._store[key]
             return None
+        self._store.move_to_end(key)
         return entry.value
 
     def set(self, key: str, value: Any, ttl: int) -> None:
-        if len(self._store) >= self._max:
-            to_remove = list(self._store.keys())[: self._max // 10]
-            for k in to_remove:
-                self._store.pop(k, None)
+        if key in self._store:
+            self._store.pop(key, None)
+        elif len(self._store) >= self._max:
+            self._store.popitem(last=False)
         self._store[key] = _TTLEntry(value, ttl)
 
     def delete(self, key: str) -> None:
@@ -80,25 +83,30 @@ class Cache:
 
     def __post_init__(self):
         self._impl: _InMemoryCache | _RedisCache | None = None
+        self._impl_lock = threading.Lock()
 
     def _get_impl(self):
         if self._impl is not None:
             return self._impl
 
-        if self.backend == "redis":
-            url = self.redis_url or os.getenv("REDIS_URL", "redis://localhost:6379")
-            self._impl = _RedisCache(url)
-        elif self.backend == "memory":
-            self._impl = _InMemoryCache(self.max_size)
-        else:  
-            url = self.redis_url or os.getenv("REDIS_URL")
-            if url:
-                try:
-                    self._impl = _RedisCache(url)
-                    return self._impl
-                except ImportError:
-                    pass
-            self._impl = _InMemoryCache(self.max_size)
+        with self._impl_lock:
+            if self._impl is not None:
+                return self._impl
+
+            if self.backend == "redis":
+                url = self.redis_url or os.getenv("REDIS_URL", "redis://localhost:6379")
+                self._impl = _RedisCache(url)
+            elif self.backend == "memory":
+                self._impl = _InMemoryCache(self.max_size)
+            else:
+                url = self.redis_url or os.getenv("REDIS_URL")
+                if url:
+                    try:
+                        self._impl = _RedisCache(url)
+                        return self._impl
+                    except ImportError:
+                        pass
+                self._impl = _InMemoryCache(self.max_size)
 
         return self._impl
 

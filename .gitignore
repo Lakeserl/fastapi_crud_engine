@@ -1,28 +1,41 @@
-# Python bytecode
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
 # Virtual environments
 .venv/
 venv/
 env/
+ENV/
 
-# Build artifacts
+# Packaging / distribution
 build/
 dist/
+site/
+*.egg
 *.egg-info/
 .eggs/
+pip-wheel-metadata/
 
-# Tool caches
+# Testing / coverage / tooling caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 
-# IDE/editor
+# Notebooks
+.ipynb_checkpoints/
+
+# IDE / editor
 .idea/
 .vscode/
 *.swp
@@ -32,6 +45,9 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Local env files
 .env
 .env.*
+*.log
+
+test_project
+pyproject.toml

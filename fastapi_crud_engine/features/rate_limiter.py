@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Any
 from fastapi import Request
-from core.exceptions import RateLimitException
+from ..core.exceptions import RateLimitException
 
 def _key_by_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
@@ -61,7 +61,8 @@ class _RedisBackend:
         results = await pipe.execute()
 
         count = results[1]
-        if count >= limit:
+        if count > limit:
+            await self._redis.zrem(rkey, str(now))
             oldest_score = await self._redis.zrange(rkey, 0, 0, withscores=True)
             if oldest_score:
                 retry = int(oldest_score[0][1] + window - now) + 1

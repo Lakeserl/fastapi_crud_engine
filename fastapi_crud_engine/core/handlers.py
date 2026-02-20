@@ -9,12 +9,11 @@ from .exceptions import BulkOperationException, CRUDException, RateLimitExceptio
 
 
 def build_error_payload(exc: CRUDException) -> tuple[Any, dict[str, str]]:
-    detail: Any = exc.detail
+    detail: Any = {"message": exc.detail}
     headers: dict[str, str] = {}
 
     if isinstance(exc, BulkOperationException):
-        detail = {"detail": exc.detail, "errors": exc.errors}
-
+        detail["errors"] = exc.errors
     if isinstance(exc, RateLimitException):
         headers["Retry-After"] = str(exc.retry_after)
 

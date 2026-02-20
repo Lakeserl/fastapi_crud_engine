@@ -4,8 +4,6 @@ from typing import Any
 
 
 class CRUDException(Exception):
-    """Base exception for the CRUD library."""
-
     status_code: int = 400
     default_detail: str = "Request failed."
 

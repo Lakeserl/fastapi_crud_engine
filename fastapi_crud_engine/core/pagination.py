@@ -16,6 +16,10 @@ class PageParams:
         page: int = Query(default=1,  ge=1,      description="Page number (1-based)"),
         size: int = Query(default=20, ge=1, le=500, description="Items per page"),
     ):
+        if not isinstance(page, int):
+            page = 1
+        if not isinstance(size, int):
+            size = 20
         self.page   = page
         self.size   = size
         self.offset = (page - 1) * size

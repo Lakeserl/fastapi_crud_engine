@@ -9,4 +9,5 @@ reportlab>=4.0.0
 httpx
 aiosqlite
 pytest
+pytest-asyncio
 python-dateutil
