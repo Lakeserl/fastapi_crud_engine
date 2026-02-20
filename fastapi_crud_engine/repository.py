@@ -170,12 +170,15 @@ class CRUDRepository(Generic[ModelType]):
         try:
             for i, data in enumerate(items):
                 try:
-                    clean, nested = self._extract_nested(data)
-                    obj = self.model(**clean)
-                    db.add(obj)
-                    await db.flush()
-                    await self._handle_nested_create(db, obj, nested)
-                    created.append(obj)
+                    # Isolate each row in a SAVEPOINT so one row failure
+                    # does not invalidate the whole transaction immediately.
+                    async with db.begin_nested():
+                        clean, nested = self._extract_nested(data)
+                        obj = self.model(**clean)
+                        db.add(obj)
+                        await db.flush()
+                        await self._handle_nested_create(db, obj, nested)
+                        created.append(obj)
                 except Exception as exc:
                     errors.append({"index": i, "data": data, "error": str(exc)})
 
@@ -228,6 +231,10 @@ class CRUDRepository(Generic[ModelType]):
                 if hasattr(obj, key):
                     setattr(obj, key, value)
 
+            # Snapshot new state before flush/commit so audit serialization
+            # does not depend on SQLAlchemy expiration behavior.
+            new_snap = self._snapshot(obj)
+
             await self._handle_nested_update(db, obj, nested)
             await db.flush()
 
@@ -237,7 +244,7 @@ class CRUDRepository(Generic[ModelType]):
                     table_name=self.model.__tablename__,
                     record_id=pk, action="UPDATE",
                     old_obj=_DictSnapshot(old_snap, obj.__mapper__),
-                    new_obj=obj,
+                    new_obj=_DictSnapshot(new_snap, obj.__mapper__),
                     changed_by=changed_by,
                     ip_address=ip_address,
                     user_agent=user_agent,

@@ -17,6 +17,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from .core.audit import build_audit_log_model
 from .core.exceptions import (
+    BulkOperationException,
     CRUDException,
     PermissionDeniedException,
 )
@@ -276,6 +277,38 @@ class CRUDRouter(APIRouter):
         except Exception:
             return "user"
 
+    @staticmethod
+    def _coerce_import_value(column: Any, value: Any) -> Any:
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            value = value.strip()
+            if value == "":
+                return None
+
+        try:
+            py_type = column.type.python_type
+        except Exception:
+            return value
+
+        if isinstance(value, py_type):
+            return value
+
+        if py_type is bool and isinstance(value, str):
+            v = value.lower()
+            if v in {"1", "true", "t", "yes", "y"}:
+                return True
+            if v in {"0", "false", "f", "no", "n"}:
+                return False
+
+        if py_type is int and isinstance(value, str):
+            return int(value)
+        if py_type is float and isinstance(value, str):
+            return float(value)
+
+        return value
+
     async def _cache_get(self, key: str) -> Any | None:
         if not self.cache:
             return None
@@ -374,7 +407,12 @@ class CRUDRouter(APIRouter):
                 if self.field_perms:
                     role = self._get_role(request)
                     payload = result.model_dump()
-                    payload["items"] = self._filter_list_for_role(result.items, role)
+                    items = self._filter_list_for_role(result.items, role)
+                    # /deleted should always expose deleted_at for soft-delete records.
+                    for i, obj in enumerate(result.items):
+                        if i < len(items):
+                            items[i]["deleted_at"] = getattr(obj, "deleted_at", None)
+                    payload["items"] = items
                     return self._json(payload)
                 return result
 
@@ -630,6 +668,8 @@ class CRUDRouter(APIRouter):
                 )
                 model_fields = [c.key for c in model.__mapper__.column_attrs]
                 valid, errors = await import_csv_or_excel(file, model_fields)
+                total_rows = len(valid) + len(errors)
+
                 if self.field_perms and valid:
                     filtered_valid: list[dict[str, Any]] = []
                     for idx, row in enumerate(valid, start=2):
@@ -641,17 +681,59 @@ class CRUDRouter(APIRouter):
                             errors.append({"row": idx, "error": exc.detail})
                     valid = filtered_valid
 
+                # Coerce imported values (e.g. "11" -> int for Integer column),
+                # and skip empty strings to let DB defaults/nullability apply.
+                normalized_valid: list[dict[str, Any]] = []
+                model_columns = {c.key: c for c in model.__table__.columns}
+                for idx, row in enumerate(valid, start=2):
+                    normalized: dict[str, Any] = {}
+                    row_error: str | None = None
+                    for key, raw_value in row.items():
+                        col = model_columns.get(key)
+                        if col is None:
+                            continue
+                        if col.primary_key and (col.autoincrement or col.server_default is not None):
+                            continue
+                        try:
+                            value = self._coerce_import_value(col, raw_value)
+                        except Exception as exc:
+                            row_error = f"Invalid value for '{key}': {exc}"
+                            break
+                        if value is None:
+                            continue
+                        normalized[key] = value
+
+                    if row_error:
+                        errors.append({"row": idx, "error": row_error})
+                        continue
+                    if not normalized:
+                        errors.append({"row": idx, "error": "No valid values after coercion"})
+                        continue
+                    normalized_valid.append(normalized)
+
+                valid = normalized_valid
+
                 created = []
                 if valid:
                     try:
                         created = await repo.bulk_create(
                             db, valid, changed_by=changed_by
                         )
+                    except BulkOperationException as exc:
+                        return {
+                            "created": 0,
+                            "errors": errors + exc.errors,
+                            "total_rows": total_rows,
+                        }
                     except Exception as exc:
-                        return {"created": 0, "errors": [{"error": str(exc)}]}
+                        return {
+                            "created": 0,
+                            "errors": errors + [{"error": str(exc)}],
+                            "total_rows": total_rows,
+                        }
                 await self._cache_invalidate()
                 return {
                     "created": len(created),
                     "errors":  errors,
-                    "total_rows": len(valid) + len(errors),
+                    "total_rows": total_rows,
                 }

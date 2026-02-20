@@ -55,12 +55,12 @@ class _RedisBackend:
 
         pipe = self._redis.pipeline()
         await pipe.zremrangebyscore(rkey, 0, cutoff)
-        await pipe.zcard(rkey)
         await pipe.zadd(rkey, {str(now): now})
+        await pipe.zcard(rkey)
         await pipe.expire(rkey, window + 1)
         results = await pipe.execute()
 
-        count = results[1]
+        count = results[2]
         if count > limit:
             await self._redis.zrem(rkey, str(now))
             oldest_score = await self._redis.zrange(rkey, 0, 0, withscores=True)

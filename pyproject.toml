@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-crud-engine"
+version = "0.1.3"
+description = "FastAPI CRUD router and repository toolkit."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110.0,<1.0.0",
+  "pydantic>=2.0.0,<3.0.0",
+  "SQLAlchemy>=2.0.0,<3.0.0",
+  "httpx>=0.24.0,<1.0.0",
+  "python-dateutil>=2.8.2,<3.0.0",
+]
+classifiers = [
+  "Framework :: FastAPI",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Typing :: Typed",
+  "License :: OSI Approved :: MIT License",
+]
+
+[project.optional-dependencies]
+excel  = ["openpyxl>=3.1.0"]
+redis  = ["redis>=5.0.0"]
+celery = ["celery>=5.3.0"]
+dev    = ["aiosqlite>=0.20.0", "pytest>=7.0.0", "pytest-asyncio>=0.21.0"]
+all    = ["openpyxl>=3.1.0", "redis>=5.0.0", "celery>=5.3.0"]
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["fastapi_crud_engine*"] 
+exclude = ["tests*", "__pycache__*"]
+
+[tool.setuptools.package-data]
+fastapi_crud_engine = ["py.typed"] 
