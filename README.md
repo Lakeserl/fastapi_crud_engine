@@ -67,14 +67,6 @@ python -m pip install "fastapi-crud-engine[excel,redis,celery]"
 - `redis`: enables Redis cache and Redis rate limiter
 - `celery`: enables async webhook delivery through Celery workers
 
-### Install from source (local development)
-
-```bash
-git clone https://github.com/Lakeserl/auto-crud.git
-cd auto-crud
-python -m pip install -e ".[dev]"
-```
-
 ## Quickstart
 
 ```python
@@ -380,7 +372,6 @@ repo = CRUDRepository(User, soft_delete=True)
   - Used by `Cache(backend="auto")` and `RateLimiter(redis_url=None)`
 - `CELERY_BROKER_URL`
   - Used when `WebhookConfig(delivery="celery")`
-
 
 ### Contributing
 

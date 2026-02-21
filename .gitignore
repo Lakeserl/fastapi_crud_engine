@@ -50,3 +50,4 @@ Thumbs.db
 *.log
 
 test_project
+uv.lock
