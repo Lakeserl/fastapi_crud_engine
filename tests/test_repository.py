@@ -84,6 +84,14 @@ class _FakeResult:
         return _FakeScalarCollection(self._items)
 
 
+class _FakeNestedTransaction:
+    async def __aenter__(self) -> "_FakeNestedTransaction":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
+        return False
+
+
 @dataclass
 class FakeDB:
     execute_results: list[_FakeResult] = field(default_factory=list)
@@ -98,6 +106,9 @@ class FakeDB:
         if not self.execute_results:
             return _FakeResult()
         return self.execute_results.pop(0)
+
+    def begin_nested(self) -> _FakeNestedTransaction:
+        return _FakeNestedTransaction()
 
     def add(self, obj: Any) -> None:
         if getattr(obj, "id", None) is None:
