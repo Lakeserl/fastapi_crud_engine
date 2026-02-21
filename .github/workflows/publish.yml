@@ -93,6 +93,8 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.TEST_PYPI_TOKEN }}
+          skip-existing: true
+          verbose: true
 
   verify_test_pypi:
     name: Verify install from TestPyPI
@@ -145,3 +147,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TOKEN }}
+          skip-existing: true
+          verbose: true
