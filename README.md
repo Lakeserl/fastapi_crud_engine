@@ -381,7 +381,6 @@ repo = CRUDRepository(User, soft_delete=True)
 - `CELERY_BROKER_URL`
   - Used when `WebhookConfig(delivery="celery")`
 
-
 ### Contributing
 
 - Read `CONTRIBUTING.md`
